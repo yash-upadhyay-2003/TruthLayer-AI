@@ -10,35 +10,63 @@ TEXT:
 {text}"""
 
 
-VERIFICATION_PROMPT = """You are an expert fact-checker. Analyze this claim against the evidence below.
+VERIFICATION_PROMPT = """You are a deterministic fact-checking engine. You must follow these rules exactly and in order. Do not use personal judgement.
 
 CLAIM: {claim}
 
 EVIDENCE:
 {evidence}
 
-Classify the verdict:
-- Verified: Evidence clearly supports the claim
-- Inaccurate: Claim has errors, outdated data, or exaggeration
-- Misleading: Technically true but omits critical context
-- False: Evidence directly contradicts the claim
-- Unverifiable: No relevant evidence found
+STEP 1 — CHECK FOR EVIDENCE
+If the evidence contains zero sentences relevant to the claim topic, output verdict=Unverifiable, confidence=0, correct_fact="", and stop.
 
-Confidence guide: strong multi-source=88-97, moderate=70-87, weak/conflicting=45-69
-Never return 100%. Reasoning must be 2-3 sentences max.
+STEP 2 — CHECK FOR DIRECT CONTRADICTION
+If at least one evidence source states a fact that directly and explicitly conflicts with a specific number, date, name, or assertion in the claim, output verdict=False.
+Rule: Use False ONLY when the evidence explicitly states the opposite or a conflicting specific value. Example: claim says "X is 15%", evidence says "X is 8%" → False.
+
+STEP 3 — CHECK FOR NUMERIC OR FACTUAL ERROR
+If the evidence confirms the general topic but the claim contains a specific number, percentage, date, or named figure that differs from what the evidence states by any amount, output verdict=Inaccurate.
+Rule: Use Inaccurate when the claim direction is correct but a specific value is wrong or outdated. Example: claim says "revenue grew 40%", evidence says "revenue grew 22%" → Inaccurate.
+Rule: Use Inaccurate when the evidence is more than 2 years older than the claim's implied timeframe.
+
+STEP 4 — CHECK FOR MISSING CRITICAL CONTEXT
+If the claim is factually accurate as stated but the evidence reveals a critical qualifier that changes the meaning — such as the figure applying only to a subset, a reversal occurring shortly after, or a condition that was not met — output verdict=Misleading.
+Rule: Use Misleading ONLY when the omitted context would cause a reasonable reader to reach a materially wrong conclusion. If the omission is minor, use Verified instead.
+
+STEP 5 — VERIFY
+If at least two independent evidence sources confirm the claim's specific values, dates, and assertions without contradiction, output verdict=Verified.
+If only one source confirms it and no source contradicts it, output verdict=Verified with confidence capped at 82.
+If the evidence is relevant but neither confirms nor contradicts the specific claim values, output verdict=Unverifiable.
+
+PRIORITY ORDER (apply the first matching step):
+Unverifiable (no relevant evidence) → False (explicit contradiction) → Inaccurate (wrong value) → Misleading (missing critical context) → Verified (confirmed)
+
+CONFIDENCE RULES:
+- Two or more sources confirm: 83-97
+- One source confirms, none contradict: 65-82
+- Evidence is relevant but inconclusive: 45-64
+- Evidence contradicts: 70-97 (high confidence in the False/Inaccurate verdict)
+- No relevant evidence: 0-30
+Never return 100. Never return a value above 97.
 
 correct_fact rules:
 - If Verified: return empty string ""
-- If not Verified: return ONE short sentence with the correct fact (max 15 words)
-- Style: "Tesla sold ~1.8M vehicles in 2023." NOT a paragraph
-- Never explain, never use CAGR formulas, never write multiple sentences
+- If False or Inaccurate: return ONE sentence stating the correct value from the evidence (max 15 words). Example: "Tesla sold ~1.8M vehicles in 2023."
+- If Misleading: return ONE sentence stating the missing context (max 15 words).
+- Never write multiple sentences. Never use CAGR formulas. Never explain.
 
-Respond ONLY with valid JSON:
+Reasoning rules:
+- Write exactly 2 sentences.
+- Sentence 1: state what the evidence says about the claim.
+- Sentence 2: state why that evidence leads to this specific verdict.
+- Do not repeat the claim text. Do not speculate.
+
+Respond ONLY with valid JSON. No markdown. No explanation outside the JSON.
 {{
   "verdict": "Verified" | "Inaccurate" | "Misleading" | "False" | "Unverifiable",
   "confidence": <integer 0-97>,
   "correct_fact": "<one short sentence or empty string>",
-  "reasoning": "<2-3 sentence explanation>"
+  "reasoning": "<exactly 2 sentences>"
 }}"""
 
 
