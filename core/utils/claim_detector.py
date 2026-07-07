@@ -15,14 +15,14 @@ async def detect_claims(text: str, max_claims: int, groq_service: GroqService) -
     claims: List[str] = []
     try:
         prompt = CLAIM_EXTRACTION_PROMPT.format(text=truncated, max_claims=max_claims)
-        response = await groq_service.complete(prompt=prompt, max_tokens=1024, temperature=0.1)
+        response = await groq_service.complete(prompt=prompt, max_tokens=1024, temperature=0.0, seed=42, json_mode=True)
         parsed = safe_json_parse(response)
-        if isinstance(parsed, list):
-            raw = [str(c).strip() for c in parsed if str(c).strip()]
-            claims = filter_claims(raw)
+        if isinstance(parsed, dict) and "claims" in parsed and isinstance(parsed["claims"], list):
+            raw = [str(c).strip() for c in parsed["claims"] if str(c).strip()]
+            claims = filter_claims(raw, strict=False)
             logger.info("LLM extracted %d raw → %d valid claims", len(raw), len(claims))
         else:
-            logger.warning("LLM did not return a list — falling back to heuristics")
+            logger.warning("LLM did not return a valid dictionary with 'claims' list — falling back to heuristics")
     except Exception as e:
         logger.warning("LLM extraction failed: %s — falling back to heuristics", e)
 

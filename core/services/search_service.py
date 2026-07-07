@@ -22,14 +22,20 @@ def _tier(url: str) -> int:
     return 2
 
 
+_SEARCH_CACHE = {}
+
 class SearchService:
     def __init__(self):
         self.max_results = get_search_results()
 
     async def search(self, query: str) -> List[Dict[str, Any]]:
+        if query in _SEARCH_CACHE:
+            return _SEARCH_CACHE[query]
         try:
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, self._sync_search, query)
+            result = await loop.run_in_executor(None, self._sync_search, query)
+            _SEARCH_CACHE[query] = result
+            return result
         except Exception as e:
             logger.warning("Search failed for '%s': %s", query[:60], e)
             return []

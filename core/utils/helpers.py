@@ -6,9 +6,10 @@ from typing import Any, List, Optional
 logger = logging.getLogger(__name__)
 
 _FACTUAL_SIGNAL = re.compile(
-    r'\b(\d{4}|\d+[\.,]\d+|\d+\s*%|\$\s*[\d,]+|million|billion|trillion|'
+    r'\b(\d{4}|\d+[\.,]\d+|\d+\s*%|\$\s*[\d,]+|\d+|million|billion|trillion|\d+\s*days|\d+\s*years|'
     r'founded|launched|released|acquired|declared|announced|increased|decreased|'
-    r'grew|fell|rose|dropped|reached|exceeded|ranked|reported|published|discovered)\b',
+    r'grew|fell|rose|dropped|reached|exceeded|ranked|reported|published|discovered|'
+    r'capital|president|ceo|headquarters|located|based\s+in|known\s+as)\b',
     re.IGNORECASE
 )
 _FRAGMENT = re.compile(
@@ -19,7 +20,8 @@ _FRAGMENT = re.compile(
 _HAS_VERB = re.compile(
     r'\b(is|are|was|were|has|have|had|will|would|founded|launched|released|sold|'
     r'reached|grew|fell|increased|decreased|declared|announced|reported|published|'
-    r'became|holds|owns|operates|replaced|acquired|exceeded|ranked|named|discovered)\b',
+    r'became|holds|owns|operates|replaced|acquired|exceeded|ranked|named|discovered|'
+    r'revolves|orbits|contains|consists|comprises|serves|represents|makes|takes)\b',
     re.IGNORECASE
 )
 _SENTENCE_SIGNAL = re.compile(
@@ -28,7 +30,7 @@ _SENTENCE_SIGNAL = re.compile(
     r'fell\s+by|sold\s+\d+|reached\s+\d+|declared\s+\w+)',
     re.IGNORECASE
 )
-MIN_WORDS, MIN_CHARS = 6, 30
+MIN_WORDS, MIN_CHARS = 4, 15
 
 
 def is_valid_claim(text: str) -> bool:
@@ -44,11 +46,13 @@ def is_valid_claim(text: str) -> bool:
     return True
 
 
-def filter_claims(claims: List[str]) -> List[str]:
+def filter_claims(claims: List[str], strict: bool = True) -> List[str]:
     seen, valid = set(), []
     for c in claims:
         c = re.sub(r'^\d+[\.\)]\s*', '', c.strip().strip('"').strip("'")).strip()
-        if not c or c.lower() in seen or not is_valid_claim(c):
+        if not c or c.lower() in seen:
+            continue
+        if strict and not is_valid_claim(c):
             continue
         seen.add(c.lower())
         valid.append(c)

@@ -62,7 +62,7 @@ class VerificationService:
                            f"False: {counts['False']}, Unverifiable: {counts['Unverifiable']}.")
         try:
             return await self.groq.complete(SUMMARY_PROMPT.format(results_summary=results_summary),
-                                            max_tokens=150, temperature=0.3)
+                                            max_tokens=150, temperature=0.0, seed=42)
         except Exception:
             v, i, f = counts["Verified"], counts["Inaccurate"], counts["False"]
             return (f"This document contains {len(results)} factual claims. "

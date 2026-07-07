@@ -1,5 +1,4 @@
 import logging
-import hashlib
 from typing import Dict, Any
 from core.services.groq_service import GroqService
 from core.services.search_service import SearchService
@@ -25,16 +24,11 @@ def _source_bonus(sources: list) -> float:
     return min(bonus, 6.0)
 
 
-def _natural_variation(claim: str, base: float) -> float:
-    h = int(hashlib.md5(claim.encode()).hexdigest(), 16)
-    return max(0.0, min(97.0, base + (h % 7) - 3))
-
-
 async def verify_claim(claim: str, groq_service: GroqService, search_service: SearchService) -> Dict[str, Any]:
     search_results = await search_service.search(claim)
     evidence_text = format_evidence(search_results)
     prompt = VERIFICATION_PROMPT.format(claim=claim, evidence=evidence_text)
-    response = await groq_service.complete(prompt=prompt, max_tokens=400, temperature=0.1)
+    response = await groq_service.complete(prompt=prompt, max_tokens=600, temperature=0.0, seed=42, json_mode=True)
     parsed = safe_json_parse(response)
 
     if not isinstance(parsed, dict):
@@ -51,7 +45,7 @@ async def verify_claim(claim: str, groq_service: GroqService, search_service: Se
     except (TypeError, ValueError):
         confidence = 0.0
 
-    confidence = _natural_variation(claim, min(_source_bonus(search_results) + confidence, 97.0))
+    confidence = min(_source_bonus(search_results) + confidence, 97.0)
 
     reasoning = str(parsed.get("reasoning", "")).strip()
     sentences = reasoning.split(". ")

@@ -1,10 +1,9 @@
-CLAIM_EXTRACTION_PROMPT = """You are a fact-checking assistant. Extract verifiable factual statements from the text.
+CLAIM_EXTRACTION_PROMPT = """You are a fact-checking assistant. Extract ALL verifiable factual statements from the text.
 
-Extract statements containing: dates, years, statistics, percentages, financial figures, company facts, market claims, scientific assertions, named entities with attributed facts, measurable comparisons.
-
-Be inclusive — if a statement has a number, date, or named fact, include it.
-Return MAXIMUM {max_claims} of the strongest, most specific claims.
-Return ONLY a valid JSON array of strings. No markdown, no explanation.
+Include every statement that contains: a number, date, year, percentage, financial figure, statistic, named entity with an attributed fact, market claim, geographic fact, or measurable comparison.
+Do NOT filter by importance or specificity. Do NOT skip a claim because it seems minor or obvious.
+Extract every qualifying statement you find, up to {max_claims} total.
+Return ONLY a valid JSON object with a single key "claims" containing an array of strings. No markdown, no explanation.
 
 TEXT:
 {text}"""
